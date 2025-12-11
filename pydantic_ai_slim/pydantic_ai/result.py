@@ -1,6 +1,7 @@
 from __future__ import annotations as _annotations
 
-from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Iterator
+import inspect
+from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine, Iterable, Iterator
 from contextlib import asynccontextmanager
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
@@ -778,15 +779,14 @@ class StreamedRunResultSync(Generic[AgentDepsT, OutputDataT]):
 
     def _async_to_sync(
         self,
-        func: Callable[[StreamedRunResult[AgentDepsT, OutputDataT]], Awaitable[T]]
-        | Callable[[StreamedRunResult[AgentDepsT, OutputDataT]], T],
+        func: Callable[[StreamedRunResult[AgentDepsT, OutputDataT]], Coroutine[Any, Any, T] | T],
     ) -> T:
         async def my_task():
             async with self._with_streamed_run_result() as result:
-                if _utils.is_async_callable(func):
-                    return await func(result)
-                else:
-                    return func(result)
+                res = func(result)
+                if inspect.isawaitable(res):
+                    res = await res
+                return res
 
         return _utils.get_event_loop().run_until_complete(my_task())
 
