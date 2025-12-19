@@ -3209,32 +3209,6 @@ async def test_get_output_after_stream_output():
                 timestamp=IsNow(tz=timezone.utc),
                 run_id=IsStr(),
             ),
-            ModelResponse(
-                parts=[
-                    ToolCallPart(
-                        tool_name='final_result',
-                        args={'response': False},
-                        tool_call_id='pyd_ai_tool_call_id__final_result',
-                    )
-                ],
-                usage=RequestUsage(input_tokens=51),
-                model_name='test',
-                timestamp=IsNow(tz=timezone.utc),
-                provider_name='test',
-                run_id=IsStr(),
-            ),
-            ModelRequest(
-                parts=[
-                    ToolReturnPart(
-                        tool_name='final_result',
-                        content='Final result processed.',
-                        tool_call_id='pyd_ai_tool_call_id__final_result',
-                        timestamp=IsNow(tz=timezone.utc),
-                    )
-                ],
-                timestamp=IsNow(tz=timezone.utc),
-                run_id=IsStr(),
-            ),
         ]
     )
 
@@ -3269,3 +3243,53 @@ async def test_streamed_run_result_sync():
                 ),
             ]
         )
+
+
+def test_stream_output_after_get_output_sync():
+    m = TestModel()
+
+    agent = Agent(m, output_type=bool)
+
+    result = agent.run_stream_sync('Hello')
+
+    assert result.get_output() == snapshot(False)
+    assert [c for c in result.stream_output()] == snapshot([False])
+
+    assert result.all_messages() == snapshot(
+        [
+            ModelRequest(
+                parts=[
+                    UserPromptPart(
+                        content='Hello',
+                        timestamp=IsNow(tz=timezone.utc),
+                    )
+                ],
+                run_id=IsStr(),
+            ),
+            ModelResponse(
+                parts=[
+                    ToolCallPart(
+                        tool_name='final_result',
+                        args={'response': False},
+                        tool_call_id='pyd_ai_tool_call_id__final_result',
+                    )
+                ],
+                usage=RequestUsage(input_tokens=51),
+                model_name='test',
+                timestamp=IsNow(tz=timezone.utc),
+                provider_name='test',
+                run_id=IsStr(),
+            ),
+            ModelRequest(
+                parts=[
+                    ToolReturnPart(
+                        tool_name='final_result',
+                        content='Final result processed.',
+                        tool_call_id='pyd_ai_tool_call_id__final_result',
+                        timestamp=IsNow(tz=timezone.utc),
+                    )
+                ],
+                run_id=IsStr(),
+            ),
+        ]
+    )
